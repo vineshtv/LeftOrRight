@@ -4,7 +4,10 @@ let inputs = [];
 let targets = [];
 let train = false;
 let itr = 0;
-let epoch = 10000;
+let epoch = 20000;
+let mp = 0;
+var predBitList = [];
+var totalCorrect = 0;
 
 function setup() {
 	createCanvas(28 * cellSize + 1, 28 * cellSize + 1);
@@ -33,7 +36,7 @@ function draw() {
     if (train){
         itr++;
     }
-    console.log(itr);
+    
     randCellIndex = floor(random(cells.length));
     cells[randCellIndex].pick();
     for(var i = 0; i < cells.length; i++){
@@ -43,27 +46,45 @@ function draw() {
     updateInput(randCellIndex);
     
     prediction = brain.query(inputs);
-    //console.log(prediction);
+    
     if(prediction[0] > prediction[1]){
         pred = "Left";
     }else{
         pred = "Right";
     }
     
+    var result = "Wrong";
+    
+    if((cells[randCellIndex].i > 13 && pred == "Right") ||
+        (cells[randCellIndex].i <= 13 && pred == "Left")){
+        result = "Correct";
+    }
+    
+    var len = predBitList.unshift(result == "Correct"? 1 : 0);
+    totalCorrect += (result == "Correct" ? 1: 0);
+    if(len > 200){
+        var x = predBitList.pop();
+        totalCorrect -= x;
+    }
+    
     removeElements()
     createP("Brain's Prediction: " + pred);
+    var outlist = ""
+    for(var i = 0; i < predBitList.length; i++){
+        outlist += predBitList[i];
+    }
+    createP("Report - " + outlist);
+    var accuracy = totalCorrect / predBitList.length;
+    createP("Accuracy (over the past 200 samples) : " + accuracy);
     
     if(train){
         if(itr < epoch){
             targets = [0, 0];
-            //console.log(cells[randCellIndex].i);
-            //console.log(cells[randCellIndex].j);
             if(cells[randCellIndex].i > 13){
                 targets[1] = 1;
             }else{
                 targets[0] = 1;
             }
-            //console.log(targets);
             brain.train(inputs, targets);
         }
     }
@@ -81,7 +102,6 @@ function draw() {
 function keyPressed(){
     if (key == ' '){
         train = true;
-        //redraw();
         loop();
     }
 }
@@ -90,12 +110,13 @@ function mousePressed(){
     if((mouseX > 0 && mouseX < width) &&
        (mouseY > 0 && mouseY < height)) {
         targets = [0, 0];
+        mp++;
         if (mouseX > width/2){
             targets[1] = 1;
         } else{
             targets[0] = 1;
         }
-        //console.log(targets);
+        console.log(targets);
         brain.train(inputs, targets);
         redraw();
     }
